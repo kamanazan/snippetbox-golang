@@ -3,6 +3,7 @@ package main
 import (
 	"html/template"
 	"path/filepath"
+	"time"
 
 	"snippetbox.kamanazan.net/internal/models"
 )
@@ -13,8 +14,18 @@ import (
 // to it as the build progresses.
 // TODO: why not use map ?
 type templateData struct {
-	Snippet  *models.Snippet
-	Snippets []*models.Snippet
+	Snippet     *models.Snippet
+	Snippets    []*models.Snippet
+	CurrentYear int
+}
+
+func humanDate(t time.Time) string {
+	// TODO: need more info for time formatting, still confused about layout
+	return t.Format("02 Jan 2006 at 15:04")
+}
+
+var funcTemplate = template.FuncMap{
+	"humanDate": humanDate,
 }
 
 func newTemplateCache() (map[string]*template.Template, error) {
@@ -50,7 +61,7 @@ func newTemplateCache() (map[string]*template.Template, error) {
 		// 	return nil, err
 		// }
 
-		ts, err := template.ParseFiles("./ui/html/base.html")
+		ts, err := template.New(name).Funcs(funcTemplate).ParseFiles("./ui/html/base.html")
 		if err != nil {
 			return nil, err
 		}
