@@ -30,13 +30,38 @@ func newTemplateCache() (map[string]*template.Template, error) {
 	for _, page := range pages {
 		name := filepath.Base(page)
 
-		layout_files := []string{
-			"./ui/html/base.html",
-			"./ui/html/partials/nav.html",
-			page,
+		/*
+			old way to register all templates where it only assume we only have nav.html in html/partials folder.
+			it will save effort if we can automatically add any new file inside html/partial.
+			what we are going to do:
+			1. parse base.html file
+			2. since there *might* be more files in html/partial we are going to use parseGlob instead
+			3. we already knew which file to add in html/pages so we just use parse file
+
+		*/
+		// layout_files := []string{
+		// 	"./ui/html/base.html",
+		// 	"./ui/html/partials/nav.html",
+		// 	page,
+		// }
+		// // the following '...' is like destructuring in javascript
+		// ts, err := template.ParseFiles(layout_files...)
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		ts, err := template.ParseFiles("./ui/html/base.html")
+		if err != nil {
+			return nil, err
 		}
-		// the following '...' is like destructuring in javascript
-		ts, err := template.ParseFiles(layout_files...)
+
+		// mistake use "template" instead of "ts" causing other templates not rendered
+		ts, err = ts.ParseGlob("./ui/html/partials/*.html")
+		if err != nil {
+			return nil, err
+		}
+
+		ts, err = ts.ParseFiles(page)
 		if err != nil {
 			return nil, err
 		}
