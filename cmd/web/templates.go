@@ -30,24 +30,26 @@ var funcTemplate = template.FuncMap{
 
 func newTemplateCache() (map[string]*template.Template, error) {
 
-	cache := map[string]*template.Template{}
-
 	pages, err := filepath.Glob("./ui/html/pages/*.html")
 
 	if err != nil {
 		return nil, err
 	}
 
+	// since we know how many pages there are, lets use make() instead of
+	// cache := map[string]*template.Template{}
+	cache := make(map[string]*template.Template, len(pages))
+
 	for _, page := range pages {
 		name := filepath.Base(page)
 
 		/*
-			old way to register all templates where it only assume we only have nav.html in html/partials folder.
-			it will save effort if we can automatically add any new file inside html/partial.
-			what we are going to do:
-			1. parse base.html file
-			2. since there *might* be more files in html/partial we are going to use parseGlob instead
-			3. we already knew which file to add in html/pages so we just use parse file
+		   old way to register all templates where it only assume we only have nav.html in html/partials folder.
+		   it will save effort if we can automatically add any new file inside html/partial.
+		   what we are going to do:
+		   1. parse base.html file
+		   2. since there *might* be more files in html/partial we are going to use parseGlob instead
+		   3. we already knew which file to add in html/pages so we just use parse file
 
 		*/
 		// layout_files := []string{

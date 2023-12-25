@@ -25,7 +25,7 @@ func (m *SnippetModel) Insert(title, content string, expired int) (int, error) {
 	// sql standard require the interval value inside a quote (e.g IINTERVAL '7 DAYS') which make argument for the prepared statement ignored
 	// so we concat it and cast it as interval
 	stmt := `INSERT INTO snippet (title, content, created, expired) 
-			 VALUES ($1, $2, localtimestamp, (localtimestamp + ($3 || ' DAYS')::INTERVAL)) RETURNING id;`
+             VALUES ($1, $2, localtimestamp, (localtimestamp + ($3 || ' DAYS')::INTERVAL)) RETURNING id;`
 
 	var id int
 	err := m.DB.QueryRow(stmt, title, content, expired).Scan(&id)
@@ -37,9 +37,9 @@ func (m *SnippetModel) Insert(title, content string, expired int) (int, error) {
 
 func (m *SnippetModel) Get(id int) (*Snippet, error) {
 	stmt := `
-	SELECT id, title, content, created, expired FROM snippet
-	WHERE expired > localtimestamp and id = $1;
-	`
+    SELECT id, title, content, created, expired FROM snippet
+    WHERE expired > localtimestamp and id = $1;
+    `
 
 	s := &Snippet{}
 
@@ -58,11 +58,11 @@ func (m *SnippetModel) Get(id int) (*Snippet, error) {
 
 func (m *SnippetModel) Latest() ([]*Snippet, error) {
 	stmt := `
-	SELECT id, title, content, created, expired FROM snippet
-	WHERE expired > localtimestamp
-	ORDER BY id DESC
-	LIMIT 10;
-	`
+    SELECT id, title, content, created, expired FROM snippet
+    WHERE expired > localtimestamp
+    ORDER BY id DESC
+    LIMIT 10;
+    `
 
 	snippets := []*Snippet{} // kenapa pake '*' ?
 

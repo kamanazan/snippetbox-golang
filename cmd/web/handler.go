@@ -39,9 +39,9 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 func (app *application) create_snippet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		/*
-		 By default Write will return 200, so if we want to send code other than 200 we should
-		 call WriteHeader(http_code). WriteHeader can only be called once and should be done before Write().
-		 Calling WriteHeader again will give warning <http: superfluous response.WriteHeader call from main.create_snippet>
+		   By default Write will return 200, so if we want to send code other than 200 we should
+		   call WriteHeader(http_code). WriteHeader can only be called once and should be done before Write().
+		   Calling WriteHeader again will give warning <http: superfluous response.WriteHeader call from main.create_snippet>
 		*/
 		// w.WriteHeader(405)
 		// w.Write([]byte("Method not Allowed"))

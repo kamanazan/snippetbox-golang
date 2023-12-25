@@ -21,10 +21,10 @@ type application struct {
 
 func openDB(dsn string) (*sql.DB, error) {
 	/*
-		The sql.Open() function doesn’t actually create any connections, all it does is initialize the
-		pool for future use. Actual connections to the database are established lazily, as and when
-		needed for the first time. So to verify that everything is set up correctly we need to use the
-		db.Ping() method to create a connection and check for any errors.
+	   The sql.Open() function doesn’t actually create any connections, all it does is initialize the
+	   pool for future use. Actual connections to the database are established lazily, as and when
+	   needed for the first time. So to verify that everything is set up correctly we need to use the
+	   db.Ping() method to create a connection and check for any errors.
 	*/
 	db, err_on_open := sql.Open("postgres", dsn)
 	if err_on_open != nil {
