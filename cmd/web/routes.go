@@ -27,9 +27,8 @@ func (app *application) routes() http.Handler {
 	// so using localized HandleFunc like this is better for security
 	// TODO: prove it!
 	mux.HandleFunc("/", app.home)
-	mux.HandleFunc("/snippet/create", app.create_snippet)
-	mux.HandleFunc("/snippet/view", app.snippet_view)
+	mux.HandleFunc("/snippet/create", app.createSnippet)
+	mux.HandleFunc("/snippet/view", app.viewSnippet)
 
-
-	return secureHeaders(mux)
+	return app.recoverPanic(app.logRequest(secureHeaders(mux)))
 }
