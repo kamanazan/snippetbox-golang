@@ -3,11 +3,18 @@ package main
 import (
     "net/http"
     "github.com/justinas/alice"
+    "github.com/julienschmidt/httprouter"
 )
 
 func (app *application) routes() http.Handler {
-	mux := http.NewServeMux()
-
+    router := httprouter.New()
+    // Create a handler function which wraps our notFound() helper, and then
+    // assign it as the custom handler for 404 Not Found responses. You can also
+    // set a custom handler for 405 Method Not Allowed responses by setting
+    // router.MethodNotAllowed in the same way too.
+    router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        app.notFound(w)
+    })
 	// Create a file server which serves files out of the "./ui/static" directory.
 	// Note that the path given to the http.Dir function is relative to the project
 	// directory root.
@@ -21,19 +28,14 @@ func (app *application) routes() http.Handler {
 	   the user will receive a 404 page not found response.
 	   Fortunately Go includes a http.StripPrefix() helper specifically for this task.
 	*/
-	// Use the mux.Handle() function to register the file server as the handler for
-	// all URL paths that start with "/static/". For matching paths, we strip the
-	// "/static" prefix before the request reaches the file server.
-	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
-	// we avoid using http.HandleFunc directly because it comese from DefaultServeMux which is global.
-	// so if we use package that access it and the package is compromised, attacker can inject malicious code.
-	// so using localized HandleFunc like this is better for security
-	// TODO: prove it!
-	mux.HandleFunc("/", app.home)
-	mux.HandleFunc("/snippet/create", app.createSnippet)
-	mux.HandleFunc("/snippet/view", app.viewSnippet)
+	router.Handler(http.MethodGet, "/static/*filepath", http.StripPrefix("/static", fileServer))
+
+	router.HandlerFunc(http.MethodGet, "/", app.home)
+	router.HandlerFunc(http.MethodGet, "/snippet/create", app.createSnippet)
+    router.HandlerFunc(http.MethodPost, "/snippet/create", app.createSnippetPost)
+	router.HandlerFunc(http.MethodGet, "/snippet/view/:id", app.viewSnippet)
 
     middlewares := alice.New(app.recoverPanic, app.logRequest, secureHeaders)
 
-	return  middlewares.Then(mux)
+	return  middlewares.Then(router)
 }

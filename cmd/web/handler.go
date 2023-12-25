@@ -6,23 +6,13 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/julienschmidt/httprouter"
 	"snippetbox.kamanazan.net/internal/models"
 )
 
 // with  this all function here will be method for 'application' struct and have access
 // to centralized logging.
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	if r.Method != http.MethodGet {
-		// alternative of w.WriteHeader() and w.Write()
-		app.clientError(w, http.StatusMethodNotAllowed)
-		return
-	}
-	
 	snippets, err := app.snippet.Latest()
 	if err != nil {
 		app.serverError(w, err)
@@ -37,21 +27,12 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		/*
-		   By default Write will return 200, so if we want to send code other than 200 we should
-		   call WriteHeader(http_code). WriteHeader can only be called once and should be done before Write().
-		   Calling WriteHeader again will give warning <http: superfluous response.WriteHeader call from main.create_snippet>
-		*/
-		// w.WriteHeader(405)
-		// w.Write([]byte("Method not Allowed"))
+	w.Write([]byte("Display the form for creating a new snippet..."))
+}
 
-		w.Header().Set("Allow", http.MethodPost)
-		app.clientError(w, http.StatusMethodNotAllowed)
-		return
-	}
-
-	title := "O snail"
+func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request) {
+	
+    title := "O snail"
 	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
 	expires := 365
 
@@ -64,7 +45,8 @@ func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) viewSnippet(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+    params := httprouter.ParamsFromContext(r.Context())
+	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil || id < 1 {
 		app.notFound(w)
 		return
