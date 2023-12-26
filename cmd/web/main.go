@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-playground/form/v4"
 	_ "github.com/lib/pq" // we alias this import to blank identifier because we only need its init() function so it is registered in database/sql
+
 	"snippetbox.kamanazan.net/internal/models"
 )
 
@@ -17,6 +19,7 @@ type application struct {
 	infoLog       *log.Logger
 	snippet       *models.SnippetModel
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func openDB(dsn string) (*sql.DB, error) {
@@ -68,11 +71,14 @@ func main() {
 		errorLog.Fatal(err_template)
 	}
 
+	formDecoder := form.NewDecoder()
+
 	app := &application{ // the struct serve as dependeny injection, we defined it here and pass it to the handler function
 		errorLog:      errorLog,
 		infoLog:       infoLog,
 		snippet:       &models.SnippetModel{DB: db},
 		templateCache: templateCache,
+		formDecoder:   formDecoder,
 	}
 
 	// Initialize a new http.Server struct. We set the Addr and Handler fields so

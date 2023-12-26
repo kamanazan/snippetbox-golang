@@ -30,15 +30,15 @@ func (v *Validator) CheckField(ok bool, key, errMsg string) {
     }
 }
 
-func (v *Validator) StringNotEmpty(val string) bool {
+func StringNotEmpty(val string) bool {
     return strings.TrimSpace(val) != ""
 }
 
-func (v *Validator) StringInLimit(val string, limit int) bool {
+func StringInLimit(val string, limit int) bool {
     return utf8.RuneCountInString(val) <= limit
 }
 
-func (v *Validator) ValueInRange(val int, val2 []int) bool {
+func ValueInRange(val int, val2 []int) bool {
     for _, a := range val2 {
         if val == a {
             return true
