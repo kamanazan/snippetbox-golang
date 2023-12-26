@@ -12,6 +12,18 @@ import (
 	"snippetbox.kamanazan.net/internal/models"
 )
 
+// Define a snippetCreateForm struct to represent the form data and validation
+// errors for the form fields. Note that all the struct fields are deliberately
+// exported (i.e. start with a capital letter). This is because struct fields
+// must be exported in order to be read by the html/template package when
+// rendering the template.
+type snippetCreateForm struct {
+	Title string
+	Content string
+	Expired int
+	FieldErrors map[string]string
+}
+
 // with  this all function here will be method for 'application' struct and have access
 // to centralized logging.
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +42,9 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData()
-
+	data.Form = snippetCreateForm{
+		Expired: 1,
+	}
 	app.render(w, http.StatusOK, "create.html", data)
 }
 
@@ -49,27 +63,33 @@ func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	fieldErrors := map[string]string{}
-
-	if strings.TrimSpace(title) == "" {
-		fieldErrors["title"] = "This field cannot be blank"
-	} else if utf8.RuneCountInString(title) > 150 {
-		fieldErrors["title"] = "This field can not be more than 150 characters"
+	form := snippetCreateForm{
+		Title: title,
+		Content: content,
+		Expired: expired,
+		FieldErrors: map[string]string{},
 	}
 
-	if strings.TrimSpace(content) == "" {
-		fieldErrors["content"] = "This field can not be empty"
+	if strings.TrimSpace(form.Title) == "" {
+		form.FieldErrors["title"] = "This field cannot be blank"
+	} else if utf8.RuneCountInString(form.Title) > 150 {
+		form.FieldErrors["title"] = "This field can not be more than 150 characters"
+	}
+
+	if strings.TrimSpace(form.Content) == "" {
+		form.FieldErrors["content"] = "This field can not be empty"
 	}
 
 	// Check the expires value matches one of the permitted values (1, 7 or
 	// 365).
-	if expired != 1 && expired != 7 && expired != 365 {
-		fieldErrors["expired"] = "This field must equal 1, 7 or 365"
+	if form.Expired != 1 && form.Expired != 7 && form.Expired != 365 {
+		form.FieldErrors["expired"] = "This field must equal 1, 7 or 365"
 	}
-	// If there are any errors, dump them in a plain text HTTP response and
-	// return from the handler.
-	if len(fieldErrors) > 0 {
-		fmt.Fprint(w, fieldErrors)
+
+	if len(form.FieldErrors) > 0 {
+		data := app.newTemplateData()
+		data.Form = form
+		app.render(w, http.StatusUnprocessableEntity, "create.html", data)
 		return
 	}
 
@@ -78,6 +98,7 @@ func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request
 		app.serverError(w, err)
 		return
 	}
+
 	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 }
 
