@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/julienschmidt/httprouter"
 	"snippetbox.kamanazan.net/internal/models"
@@ -27,21 +29,56 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Display the form for creating a new snippet..."))
+	data := app.newTemplateData()
+
+	app.render(w, http.StatusOK, "create.html", data)
 }
 
 func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request) {
 	
-    title := "O snail"
-	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
-	expires := 365
+    err := r.ParseForm()
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+	title := r.PostForm.Get("title")
+	content := r.PostForm.Get("content")
+	expired, err := strconv.Atoi(r.PostForm.Get("expired"))
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
 
-	id, err := app.snippet.Insert(title, content, expires)
+	fieldErrors := map[string]string{}
+
+	if strings.TrimSpace(title) == "" {
+		fieldErrors["title"] = "This field cannot be blank"
+	} else if utf8.RuneCountInString(title) > 150 {
+		fieldErrors["title"] = "This field can not be more than 150 characters"
+	}
+
+	if strings.TrimSpace(content) == "" {
+		fieldErrors["content"] = "This field can not be empty"
+	}
+
+	// Check the expires value matches one of the permitted values (1, 7 or
+	// 365).
+	if expired != 1 && expired != 7 && expired != 365 {
+		fieldErrors["expired"] = "This field must equal 1, 7 or 365"
+	}
+	// If there are any errors, dump them in a plain text HTTP response and
+	// return from the handler.
+	if len(fieldErrors) > 0 {
+		fmt.Fprint(w, fieldErrors)
+		return
+	}
+
+	id, err := app.snippet.Insert(title, content, expired)
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/snippet/view?id=%d", id), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 }
 
 func (app *application) viewSnippet(w http.ResponseWriter, r *http.Request) {
