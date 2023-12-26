@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/julienschmidt/httprouter"
 	"snippetbox.kamanazan.net/internal/models"
+	"snippetbox.kamanazan.net/internal/validator"
 )
 
 // Define a snippetCreateForm struct to represent the form data and validation
@@ -21,7 +20,8 @@ type snippetCreateForm struct {
 	Title string
 	Content string
 	Expired int
-	FieldErrors map[string]string
+	// embed struct here, so snippetCreateForm "inherit" everything in Validator
+	validator.Validator
 }
 
 // with  this all function here will be method for 'application' struct and have access
@@ -67,26 +67,16 @@ func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request
 		Title: title,
 		Content: content,
 		Expired: expired,
-		FieldErrors: map[string]string{},
 	}
+	form.CheckField(form.StringNotEmpty(form.Title), "title", "This field cannot be blank")
+	form.CheckField(form.StringNotEmpty(form.Content), "content", "This field cannot be blank")
+	form.CheckField(form.StringInLimit(form.Title, 150), "title", "This field can not be more than 150 characters")
+	validDuration := []int{1, 7, 365}
+	form.CheckField(form.ValueInRange(form.Expired, validDuration), "expired", "This field must equal 1, 7 or 365")
 
-	if strings.TrimSpace(form.Title) == "" {
-		form.FieldErrors["title"] = "This field cannot be blank"
-	} else if utf8.RuneCountInString(form.Title) > 150 {
-		form.FieldErrors["title"] = "This field can not be more than 150 characters"
-	}
 
-	if strings.TrimSpace(form.Content) == "" {
-		form.FieldErrors["content"] = "This field can not be empty"
-	}
 
-	// Check the expires value matches one of the permitted values (1, 7 or
-	// 365).
-	if form.Expired != 1 && form.Expired != 7 && form.Expired != 365 {
-		form.FieldErrors["expired"] = "This field must equal 1, 7 or 365"
-	}
-
-	if len(form.FieldErrors) > 0 {
+	if !form.Valid() {
 		data := app.newTemplateData()
 		data.Form = form
 		app.render(w, http.StatusUnprocessableEntity, "create.html", data)
