@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/alexedwards/scs/postgresstore" // New import
 	"github.com/alexedwards/scs/v2"
@@ -96,6 +97,10 @@ func main() {
 		Addr:     *addr,
 		ErrorLog: errorLog,
 		Handler:  app.routes(),
+		// Add Idle, Read and Write timeouts to the server.
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	// The value returned from the flag.String() function is a pointer to the flag
@@ -103,7 +108,7 @@ func main() {
 	// prefix it with the * symbol) before using it. Note that we're using the
 	// log.Printf() function to interpolate the address with the log message.
 	infoLog.Printf("Starting server on %s", *addr)
-	// since we initialize our own, we no longer pass address and handler(mux) param anymore
-	err := srv.ListenAndServe()
+
+	err := srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 	errorLog.Fatal(err)
 }
