@@ -1,20 +1,21 @@
 package main
 
 import (
-    "net/http"
-    "github.com/justinas/alice"
-    "github.com/julienschmidt/httprouter"
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/justinas/alice"
 )
 
 func (app *application) routes() http.Handler {
-    router := httprouter.New()
-    // Create a handler function which wraps our notFound() helper, and then
-    // assign it as the custom handler for 404 Not Found responses. You can also
-    // set a custom handler for 405 Method Not Allowed responses by setting
-    // router.MethodNotAllowed in the same way too.
-    router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        app.notFound(w)
-    })
+	router := httprouter.New()
+	// Create a handler function which wraps our notFound() helper, and then
+	// assign it as the custom handler for 404 Not Found responses. You can also
+	// set a custom handler for 405 Method Not Allowed responses by setting
+	// router.MethodNotAllowed in the same way too.
+	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		app.notFound(w)
+	})
 	// Create a file server which serves files out of the "./ui/static" directory.
 	// Note that the path given to the http.Dir function is relative to the project
 	// directory root.
@@ -30,12 +31,17 @@ func (app *application) routes() http.Handler {
 	*/
 	router.Handler(http.MethodGet, "/static/*filepath", http.StripPrefix("/static", fileServer))
 
-	router.HandlerFunc(http.MethodGet, "/", app.home)
-	router.HandlerFunc(http.MethodGet, "/snippet/create", app.createSnippet)
-    router.HandlerFunc(http.MethodPost, "/snippet/create", app.createSnippetPost)
-	router.HandlerFunc(http.MethodGet, "/snippet/view/:id", app.viewSnippet)
+	// Create a new middleware chain containing the middleware specific to our
+	// dynamic application routes. For now, this chain will only contain the
+	// LoadAndSave session middleware but we'll add more to it later.
+	dynamic := alice.New(app.sessionManager.LoadAndSave)
 
-    middlewares := alice.New(app.recoverPanic, app.logRequest, secureHeaders)
+	router.Handler(http.MethodGet, "/", dynamic.ThenFunc(app.home))
+	router.Handler(http.MethodGet, "/snippet/create", dynamic.ThenFunc(app.createSnippet))
+	router.Handler(http.MethodPost, "/snippet/create", dynamic.ThenFunc(app.createSnippetPost))
+	router.Handler(http.MethodGet, "/snippet/view/:id", dynamic.ThenFunc(app.viewSnippet))
 
-	return  middlewares.Then(router)
+	middlewares := alice.New(app.recoverPanic, app.logRequest, secureHeaders)
+
+	return middlewares.Then(router)
 }

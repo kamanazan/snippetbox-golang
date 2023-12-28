@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/alexedwards/scs/postgresstore" // New import
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 	_ "github.com/lib/pq" // we alias this import to blank identifier because we only need its init() function so it is registered in database/sql
 
@@ -15,11 +17,12 @@ import (
 )
 
 type application struct {
-	errorLog      *log.Logger
-	infoLog       *log.Logger
-	snippet       *models.SnippetModel
-	templateCache map[string]*template.Template
-	formDecoder   *form.Decoder
+	errorLog       *log.Logger
+	infoLog        *log.Logger
+	snippet        *models.SnippetModel
+	templateCache  map[string]*template.Template
+	formDecoder    *form.Decoder
+	sessionManager *scs.SessionManager
 }
 
 func openDB(dsn string) (*sql.DB, error) {
@@ -66,6 +69,9 @@ func main() {
 
 	defer db.Close()
 
+	sessionManager := scs.New()
+	sessionManager.Store = postgresstore.New(db)
+
 	templateCache, err_template := newTemplateCache()
 	if err_template != nil {
 		errorLog.Fatal(err_template)
@@ -74,11 +80,12 @@ func main() {
 	formDecoder := form.NewDecoder()
 
 	app := &application{ // the struct serve as dependeny injection, we defined it here and pass it to the handler function
-		errorLog:      errorLog,
-		infoLog:       infoLog,
-		snippet:       &models.SnippetModel{DB: db},
-		templateCache: templateCache,
-		formDecoder:   formDecoder,
+		errorLog:       errorLog,
+		infoLog:        infoLog,
+		snippet:        &models.SnippetModel{DB: db},
+		templateCache:  templateCache,
+		formDecoder:    formDecoder,
+		sessionManager: sessionManager,
 	}
 
 	// Initialize a new http.Server struct. We set the Addr and Handler fields so

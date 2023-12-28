@@ -51,7 +51,7 @@ func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request) {
 	var form snippetCreateForm
 
-	err := app.decodeFormData(&form, r.PostForm)
+	err := app.decodeFormData(r, &form)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
@@ -76,6 +76,8 @@ func (app *application) createSnippetPost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	app.sessionManager.Put(r.Context(), "flash", "Snippet Created")
+
 	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 }
 
@@ -97,8 +99,11 @@ func (app *application) viewSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	flash := app.sessionManager.PopString(r.Context(), "flash")
+
 	data := app.newTemplateData()
 	data.Snippet = snippet
+	data.FlashMsg = flash
 
 	app.render(w, http.StatusOK, "view.html", data)
 

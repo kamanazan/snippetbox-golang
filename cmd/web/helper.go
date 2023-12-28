@@ -2,11 +2,12 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
 	"time"
-	"errors"
+
 	"github.com/go-playground/form/v4"
 )
 
@@ -63,7 +64,7 @@ func (app *application) newTemplateData() *templateData {
 	}
 }
 
-func (app *application) decodeFormData(dst any, r.http.Request) error {
+func (app *application) decodeFormData(r *http.Request, dst any) error {
 	err := r.ParseForm()
 	if err != nil {
 		return err
