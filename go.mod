@@ -12,4 +12,5 @@ require (
 require (
 	github.com/alexedwards/scs/postgresstore v0.0.0-20231113091146-cef4b05350c8 // indirect
 	github.com/alexedwards/scs/v2 v2.7.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 )

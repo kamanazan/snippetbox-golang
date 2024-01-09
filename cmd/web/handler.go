@@ -21,7 +21,20 @@ type snippetCreateForm struct {
 	Content string `form:"content"`
 	Expired int    `form:"expired"`
 	// embed struct here, so snippetCreateForm "inherit" everything in Validator
-	validator.Validator `form:-`
+	validator.Validator `form:"-"`
+}
+
+type userSignUpForm struct {
+	Name                string `form:"name"`
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
+}
+
+type userLoginForm struct {
+	Email               string `form:"email"`
+	Password            string `form:"pasword"`
+	validator.Validator `form:"-"`
 }
 
 // with  this all function here will be method for 'application' struct and have access
@@ -110,15 +123,57 @@ func (app *application) viewSnippet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) userSignup(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display a HTML form for signing up a new user...")
+	data := app.newTemplateData()
+	data.Form = userSignUpForm{}
+
+	app.render(w, http.StatusOK, "signup.html", data)
 }
 
 func (app *application) userSignupPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Create a new user...")
+	var form userSignUpForm
+
+	err := app.decodeFormData(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	// Validate the form contents using our helper functions.
+	form.CheckField(validator.StringNotEmpty(form.Name), "name", "This field cannot be blank")
+	form.CheckField(validator.StringNotEmpty(form.Email), "email", "This field cannot be blank")
+	form.CheckField(validator.ValidEmail(form.Email), "email", "This field must be a valid email address")
+	form.CheckField(validator.StringNotEmpty(form.Password), "password", "This field cannot be blank")
+	form.CheckField(validator.MinChars(form.Password, 8), "password", "This field must be at least 8 characters long")
+
+	// If there are any errors, redisplay the signup form along with a 422
+	// status code.
+	if !form.Valid() {
+		data := app.newTemplateData()
+		data.Form = form
+		app.render(w, http.StatusUnprocessableEntity, "signup.html", data)
+		return
+	}
+	// Otherwise send the placeholder response (for now!).
+
+	err = app.user.Insert(form.Name, form.Email, form.Password)
+	if err != nil {
+		fmt.Printf("is error %s %v", err, errors.Is(err, models.ErrDuplicateEmail))
+		if errors.Is(err, models.ErrDuplicateEmail) {
+			data := app.newTemplateData()
+			form.AddFieldError("email", "Email already exist")
+			data.Form = form
+			app.render(w, http.StatusUnprocessableEntity, "signup.html", data)
+			return
+
+		}
+	}
+	http.Redirect(w, r, "/", http.StatusAccepted)
 }
 
 func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display a HTML form for logging in a user...")
+	data := app.newTemplateData()
+	data.Form = userLoginForm{}
+	app.render(w, http.StatusOK, "login.html", data)
 }
 
 func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
